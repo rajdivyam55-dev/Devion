@@ -1,212 +1,204 @@
-    const fontStylesheet = document.getElementById("googleFonts");
-    if (fontStylesheet) fontStylesheet.rel = "stylesheet";
+(() => {
+  'use strict';
 
-    const root = document.documentElement;
-    const themeToggle = document.getElementById("themeToggle");
-    root.dataset.theme = "dark";
-    try {
-      localStorage.removeItem("devion-theme");
-    } catch (_) { }
+  const root = document.documentElement;
+  root.classList.add('js');
+  const byId = (id) => document.getElementById(id);
 
-    function updateThemeButton() {
-      const light = root.dataset.theme === "light";
-      themeToggle.querySelector(".theme-icon").textContent = light ? "☀" : "☾";
-      themeToggle.querySelector(".theme-label").textContent = light ? "Dark" : "Light";
-      themeToggle.setAttribute("aria-label", light ? "Switch to dark mode" : "Switch to light mode");
+  // Keep the familiar startup wording while using the new logo-led animation.
+  const bootScreen = byId('bootScreen');
+  const bootText = byId('bootText');
+  const bootStatus = byId('bootStatus');
+  const bootStartedAt = Date.now();
+  const bootDuration = 4000;
+  const bootFadeDuration = 650;
+  const bootLines = [
+    ['system ready', 'Core interface initialized.'],
+    ['developer online..........', 'Connection established.'],
+    ['welcome to devion', 'Entering portfolio.']
+  ];
+  let lineIndex = 0;
+  let charIndex = 0;
+  const dismissBoot = () => bootScreen?.classList.add('boot-complete');
+  const bootFailsafe = window.setTimeout(dismissBoot, bootDuration - bootFadeDuration);
+
+  function typeBootLine() {
+    if (!bootScreen || !bootText || !bootStatus) {
+      window.clearTimeout(bootFailsafe);
+      return;
     }
-    updateThemeButton();
+    if (lineIndex >= bootLines.length) {
+      bootStatus.textContent = 'Launching Devion...';
+      window.setTimeout(() => {
+        const remaining = Math.max(0, bootDuration - (Date.now() - bootStartedAt) - bootFadeDuration);
+        window.setTimeout(() => {
+          dismissBoot();
+          window.clearTimeout(bootFailsafe);
+        }, remaining);
+      }, 180);
+      return;
+    }
+    const [line, status] = bootLines[lineIndex];
+    if (charIndex < line.length) {
+      bootText.textContent += line[charIndex++];
+      window.setTimeout(typeBootLine, 22);
+      return;
+    }
+    bootStatus.textContent = status;
+    lineIndex += 1;
+    charIndex = 0;
+    window.setTimeout(() => {
+      bootText.textContent = '';
+      typeBootLine();
+    }, 160);
+  }
+  window.setTimeout(typeBootLine, 90);
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) dismissBoot();
+  });
 
-    themeToggle.addEventListener("click", () => {
-      root.dataset.theme = root.dataset.theme === "light" ? "dark" : "light";
-      updateThemeButton();
+  const year = byId('year');
+  if (year) year.textContent = String(new Date().getFullYear());
+
+  // Responsive navigation.
+  const menuToggle = byId('menuToggle');
+  const navLinks = byId('navLinks');
+  if (menuToggle && navLinks) {
+    const closeMenu = () => {
+      navLinks.classList.remove('nav-open');
+      menuToggle.setAttribute('aria-expanded', 'false');
+      menuToggle.setAttribute('aria-label', 'Open navigation');
+    };
+    menuToggle.addEventListener('click', () => {
+      const open = navLinks.classList.toggle('nav-open');
+      menuToggle.setAttribute('aria-expanded', String(open));
+      menuToggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
     });
+    navLinks.querySelectorAll('a').forEach((link) => link.addEventListener('click', closeMenu));
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeMenu();
+    });
+  }
 
-    document.getElementById("year").textContent = new Date().getFullYear();
+  // Theme toggle with safe storage fallback.
+  const themeToggle = byId('themeToggle');
+  try {
+    if (window.localStorage.getItem('devion-theme') === 'light') root.dataset.theme = 'light';
+  } catch (_) { /* Storage can be disabled in private or embedded browsers. */ }
+  function updateThemeButton() {
+    if (!themeToggle) return;
+    const light = root.dataset.theme === 'light';
+    const icon = themeToggle.querySelector('.theme-icon');
+    const label = themeToggle.querySelector('.theme-label');
+    if (icon) icon.textContent = light ? '☀' : '☾';
+    if (label) label.textContent = light ? 'Dark' : 'Light';
+    themeToggle.setAttribute('aria-label', light ? 'Switch to dark mode' : 'Switch to light mode');
+  }
+  updateThemeButton();
+  themeToggle?.addEventListener('click', () => {
+    root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
+    try { window.localStorage.setItem('devion-theme', root.dataset.theme); } catch (_) { /* Theme remains usable for this visit. */ }
+    updateThemeButton();
+  });
 
-
-    // Responsive mobile navigation
-    const menuToggle = document.getElementById("menuToggle");
-    const navLinks = document.getElementById("navLinks");
-    if (menuToggle && navLinks) {
-      menuToggle.addEventListener("click", () => {
-        const open = navLinks.classList.toggle("nav-open");
-        menuToggle.setAttribute("aria-expanded", String(open));
-        menuToggle.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
-      });
-      navLinks.querySelectorAll("a").forEach(link => link.addEventListener("click", () => {
-        navLinks.classList.remove("nav-open");
-        menuToggle.setAttribute("aria-expanded", "false");
-        menuToggle.setAttribute("aria-label", "Open navigation");
-      }));
-    }
-
-    // Live digital clock
-    const digitalClock = document.getElementById("digitalClock");
-    const clockTime = digitalClock.querySelector(".clock-time");
-    const clockDate = digitalClock.querySelector(".clock-date");
-
-    const clockPositionKey = "devion-clock-position";
-    let clockDrag = null;
-
-    function clampClockPosition(left, top) {
-      const maxLeft = Math.max(0, window.innerWidth - digitalClock.offsetWidth);
-      const maxTop = Math.max(0, window.innerHeight - digitalClock.offsetHeight);
-      return {
-        left: Math.min(Math.max(0, left), maxLeft),
-        top: Math.min(Math.max(0, top), maxTop)
-      };
-    }
-
-    function setClockPosition(left, top) {
-      const position = clampClockPosition(left, top);
-      digitalClock.style.left = `${position.left}px`;
-      digitalClock.style.top = `${position.top}px`;
-      digitalClock.style.right = "auto";
-    }
-
+  // Restore and clamp the movable local-time widget.
+  const clock = byId('digitalClock');
+  if (clock) {
+    const clockTime = clock.querySelector('.clock-time');
+    const clockDate = clock.querySelector('.clock-date');
+    const storageKey = 'devion-clock-position';
+    const clampPosition = (left, top) => ({
+      left: Math.min(Math.max(0, left), Math.max(0, window.innerWidth - clock.offsetWidth)),
+      top: Math.min(Math.max(0, top), Math.max(0, window.innerHeight - clock.offsetHeight))
+    });
+    const setClockPosition = (left, top) => {
+      const position = clampPosition(left, top);
+      clock.style.left = `${position.left}px`;
+      clock.style.top = `${position.top}px`;
+      clock.style.right = 'auto';
+    };
     try {
-      const savedPosition = JSON.parse(localStorage.getItem(clockPositionKey) || "null");
-      if (Number.isFinite(savedPosition?.left) && Number.isFinite(savedPosition?.top)) {
-        setClockPosition(savedPosition.left, savedPosition.top);
-      }
-    } catch (_) { }
+      const saved = JSON.parse(window.localStorage.getItem(storageKey) || 'null');
+      if (Number.isFinite(saved?.left) && Number.isFinite(saved?.top)) setClockPosition(saved.left, saved.top);
+    } catch (_) { /* Default top-right position is sufficient. */ }
 
-    digitalClock.addEventListener("pointerdown", event => {
+    let drag = null;
+    clock.addEventListener('pointerdown', (event) => {
       if (event.button !== undefined && event.button !== 0) return;
-      const bounds = digitalClock.getBoundingClientRect();
-      clockDrag = {
-        pointerId: event.pointerId,
-        startX: event.clientX,
-        startY: event.clientY,
-        left: bounds.left,
-        top: bounds.top,
-        moved: false
-      };
-      digitalClock.setPointerCapture(event.pointerId);
+      const rect = clock.getBoundingClientRect();
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, left: rect.left, top: rect.top, moved: false };
+      clock.setPointerCapture(event.pointerId);
       event.preventDefault();
     });
-
-    digitalClock.addEventListener("pointermove", event => {
-      if (!clockDrag || event.pointerId !== clockDrag.pointerId) return;
-      const deltaX = event.clientX - clockDrag.startX;
-      const deltaY = event.clientY - clockDrag.startY;
-      if (!clockDrag.moved && Math.hypot(deltaX, deltaY) < 3) return;
-      clockDrag.moved = true;
-      digitalClock.classList.add("clock-dragging");
-      setClockPosition(clockDrag.left + deltaX, clockDrag.top + deltaY);
+    clock.addEventListener('pointermove', (event) => {
+      if (!drag || event.pointerId !== drag.id) return;
+      const dx = event.clientX - drag.x;
+      const dy = event.clientY - drag.y;
+      if (!drag.moved && Math.hypot(dx, dy) < 3) return;
+      drag.moved = true;
+      clock.classList.add('clock-dragging');
+      setClockPosition(drag.left + dx, drag.top + dy);
     });
-
-    function finishClockDrag(event) {
-      if (!clockDrag || event.pointerId !== clockDrag.pointerId) return;
-      const moved = clockDrag.moved;
-      clockDrag = null;
-      digitalClock.classList.remove("clock-dragging");
+    const finishDrag = (event) => {
+      if (!drag || event.pointerId !== drag.id) return;
+      const moved = drag.moved;
+      drag = null;
+      clock.classList.remove('clock-dragging');
       if (!moved) return;
-      const bounds = digitalClock.getBoundingClientRect();
-      try {
-        localStorage.setItem(clockPositionKey, JSON.stringify({ left: bounds.left, top: bounds.top }));
-      } catch (_) { }
-    }
-
-    digitalClock.addEventListener("pointerup", finishClockDrag);
-    digitalClock.addEventListener("pointercancel", finishClockDrag);
-    window.addEventListener("resize", () => {
-      if (digitalClock.style.left) {
-        const bounds = digitalClock.getBoundingClientRect();
-        setClockPosition(bounds.left, bounds.top);
+      const rect = clock.getBoundingClientRect();
+      try { window.localStorage.setItem(storageKey, JSON.stringify({ left: rect.left, top: rect.top })); } catch (_) { /* Dragging still works without storage. */ }
+    };
+    clock.addEventListener('pointerup', finishDrag);
+    clock.addEventListener('pointercancel', finishDrag);
+    window.addEventListener('resize', () => {
+      if (clock.style.left) {
+        const rect = clock.getBoundingClientRect();
+        setClockPosition(rect.left, rect.top);
       }
-    });
+    }, { passive: true });
 
-    function updateClock() {
+    const updateClock = () => {
       const now = new Date();
-      clockTime.textContent = now.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false
-      });
-      clockDate.textContent = now.toLocaleDateString([], {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-      }).toUpperCase();
-    }
+      if (clockTime) clockTime.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      if (clockDate) clockDate.textContent = now.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+    };
     updateClock();
-    setInterval(updateClock, 1000);
+    window.setInterval(updateClock, 1000);
+  }
 
-    // Pause decorative wallpaper motion during mobile scrolls so the browser
-    // can prioritize page movement, then resume at scrollend when supported.
-    let scrollIdleTimer;
-    if (window.matchMedia("(max-width: 700px)").matches) {
-      const resumeWallpaper = () => {
-        clearTimeout(scrollIdleTimer);
-        document.body.classList.remove("is-scrolling");
-      };
-      const supportsScrollEnd = "onscrollend" in document;
-      if (supportsScrollEnd) {
-        document.addEventListener("scrollend", resumeWallpaper, { passive: true });
-      }
-      window.addEventListener("scroll", () => {
-        document.body.classList.add("is-scrolling");
-        if (!supportsScrollEnd) {
-          clearTimeout(scrollIdleTimer);
-          scrollIdleTimer = setTimeout(resumeWallpaper, 60);
-        }
-      }, { passive: true });
-    }
-
-    // Startup terminal sequence: system ready -> developer online.......... -> welcome to devion
-    const bootScreen = document.getElementById("bootScreen");
-    const bootText = document.getElementById("bootText");
-    const bootStatus = document.getElementById("bootStatus");
-    const bootLines = [
-      ["system ready", "Core interface initialized."],
-      ["developer online..........", "Connection established."],
-      ["welcome to devion", "Entering portfolio."]
-    ];
-
-    let lineIndex = 0;
-    let charIndex = 0;
-
-    function typeBootLine() {
-      if (lineIndex >= bootLines.length) {
-        bootStatus.textContent = "Launching Devion...";
-        setTimeout(() => {
-          bootScreen.classList.add("boot-complete");
-          document.body.classList.add("site-ready");
-        }, 180);
-        return;
-      }
-
-      const [line, status] = bootLines[lineIndex];
-      if (charIndex < line.length) {
-        bootText.textContent += line[charIndex++];
-        setTimeout(typeBootLine, 45);
-      } else {
-        bootStatus.textContent = status;
-        lineIndex++;
-        charIndex = 0;
-        setTimeout(() => {
-          bootText.textContent = "";
-          typeBootLine();
-        }, 500);
-      }
-    }
-
-    // The script is at the end of the document, so start without waiting for
-    // remote fonts or other resources to finish loading.
-    setTimeout(typeBootLine, 0);
-
-    // Section reveal animation
-    const revealItems = document.querySelectorAll(".reveal");
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
+  // Reveal sections only after they enter view. Without IntersectionObserver,
+  // content remains visible so older devices never get stuck on hidden text.
+  const revealItems = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const observer = new IntersectionObserver((entries, activeObserver) => {
+      entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          entry.target.classList.add("is-visible");
-          observer.unobserve(entry.target);
+          entry.target.classList.add('is-visible');
+          activeObserver.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.02 });
+    }, { threshold: 0.01, rootMargin: '0px 0px 80px 0px' });
+    revealItems.forEach((item) => observer.observe(item));
+  } else {
+    revealItems.forEach((item) => item.classList.add('is-visible'));
+  }
 
-    revealItems.forEach(item => observer.observe(item));
-  
+  // Pause the animated background during mobile scrolling to keep touch scroll
+  // smooth even on lower-powered phones.
+  if (window.matchMedia('(max-width: 700px)').matches) {
+    let idleTimer = 0;
+    const resumeWallpaper = () => {
+      window.clearTimeout(idleTimer);
+      document.body.classList.remove('is-scrolling');
+    };
+    const supportsScrollEnd = 'onscrollend' in document;
+    if (supportsScrollEnd) document.addEventListener('scrollend', resumeWallpaper, { passive: true });
+    window.addEventListener('scroll', () => {
+      document.body.classList.add('is-scrolling');
+      if (!supportsScrollEnd) {
+        window.clearTimeout(idleTimer);
+        idleTimer = window.setTimeout(resumeWallpaper, 150);
+      }
+    }, { passive: true });
+  }
+})();
