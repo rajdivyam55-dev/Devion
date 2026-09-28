@@ -5,13 +5,13 @@
   root.classList.add('js');
   const byId = (id) => document.getElementById(id);
 
-  // Keep the familiar startup wording while using the new logo-led animation.
+  // Retain the startup treatment, but keep it brief so the page is ready quickly.
   const bootScreen = byId('bootScreen');
   const bootText = byId('bootText');
   const bootStatus = byId('bootStatus');
   const bootStartedAt = Date.now();
-  const bootDuration = 4000;
-  const bootFadeDuration = 650;
+  const bootDuration = 3000;
+  const bootFadeDuration = 250;
   const bootLines = [
     ['system ready', 'Core interface initialized.'],
     ['developer online..........', 'Connection established.'],
@@ -29,19 +29,17 @@
     }
     if (lineIndex >= bootLines.length) {
       bootStatus.textContent = 'Launching Devion...';
+      const remaining = Math.max(0, bootDuration - (Date.now() - bootStartedAt) - bootFadeDuration);
       window.setTimeout(() => {
-        const remaining = Math.max(0, bootDuration - (Date.now() - bootStartedAt) - bootFadeDuration);
-        window.setTimeout(() => {
-          dismissBoot();
-          window.clearTimeout(bootFailsafe);
-        }, remaining);
-      }, 180);
+        dismissBoot();
+        window.clearTimeout(bootFailsafe);
+      }, remaining);
       return;
     }
     const [line, status] = bootLines[lineIndex];
     if (charIndex < line.length) {
       bootText.textContent += line[charIndex++];
-      window.setTimeout(typeBootLine, 22);
+      window.setTimeout(typeBootLine, 10);
       return;
     }
     bootStatus.textContent = status;
@@ -50,9 +48,9 @@
     window.setTimeout(() => {
       bootText.textContent = '';
       typeBootLine();
-    }, 160);
+    }, 75);
   }
-  window.setTimeout(typeBootLine, 90);
+  window.setTimeout(typeBootLine, 45);
   window.addEventListener('pageshow', (event) => {
     if (event.persisted) dismissBoot();
   });
@@ -163,42 +161,20 @@
       if (clockDate) clockDate.textContent = now.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
     };
     updateClock();
-    window.setInterval(updateClock, 1000);
-  }
-
-  // Reveal sections only after they enter view. Without IntersectionObserver,
-  // content remains visible so older devices never get stuck on hidden text.
-  const revealItems = document.querySelectorAll('.reveal');
-  if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    const observer = new IntersectionObserver((entries, activeObserver) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible');
-          activeObserver.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.01, rootMargin: '0px 0px 80px 0px' });
-    revealItems.forEach((item) => observer.observe(item));
-  } else {
-    revealItems.forEach((item) => item.classList.add('is-visible'));
-  }
-
-  // Pause the animated background during mobile scrolling to keep touch scroll
-  // smooth even on lower-powered phones.
-  if (window.matchMedia('(max-width: 700px)').matches) {
-    let idleTimer = 0;
-    const resumeWallpaper = () => {
-      window.clearTimeout(idleTimer);
-      document.body.classList.remove('is-scrolling');
-    };
-    const supportsScrollEnd = 'onscrollend' in document;
-    if (supportsScrollEnd) document.addEventListener('scrollend', resumeWallpaper, { passive: true });
-    window.addEventListener('scroll', () => {
-      document.body.classList.add('is-scrolling');
-      if (!supportsScrollEnd) {
-        window.clearTimeout(idleTimer);
-        idleTimer = window.setTimeout(resumeWallpaper, 150);
+    let clockTimer = window.setInterval(updateClock, 1000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        window.clearInterval(clockTimer);
+        clockTimer = 0;
+      } else if (!clockTimer) {
+        updateClock();
+        clockTimer = window.setInterval(updateClock, 1000);
       }
-    }, { passive: true });
+    });
   }
+
+  // Keep every section rendered and visible before the first scroll.
+  const revealItems = document.querySelectorAll('.reveal');
+  revealItems.forEach((item) => item.classList.add('is-visible'));
+
 })();
