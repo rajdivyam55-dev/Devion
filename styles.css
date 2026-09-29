@@ -94,32 +94,39 @@ html[data-theme="light"] .hero h1.hoverboard:hover span {
   }
 }
 
-/* Immediate content and low-cost mobile scrolling. */
-.boot-screen{display:none}
+/* Immediate content and mobile motion tuned for compositor-friendly transforms. */
+.boot-screen{display:grid}
 .js .reveal{opacity:1;transform:none;transition:none}
 .hero-content{padding-bottom:3.5rem}
 #about{padding-top:3.5rem}
 @media(max-width:700px){
   body::after{display:none}
   .wallpaper *{animation:none!important;will-change:auto!important}
+  .wallpaper .star-field-a{animation:starDrift 75s ease-in-out infinite alternate!important;will-change:transform!important}
+  .wallpaper .star-field-b{display:none!important}
+  .wallpaper .orbit-one{animation:orbitSpin 55s linear infinite!important;will-change:transform!important}
+  .wallpaper .orbit-two{animation:orbitSpin 72s linear infinite reverse!important;will-change:transform!important}
+  .wallpaper .eclipse-moon{animation:eclipseOrbit 24s ease-in-out infinite!important;will-change:transform!important}
+  .wallpaper .eclipse-corona{animation:coronaPulse 28s ease-in-out infinite!important;will-change:transform!important}
+  .hero-orb{display:grid;width:min(250px,62vw);margin:1rem auto 0;animation:heroIn .8s .15s both,floatOrb 10s 1s ease-in-out infinite}
+  .ring-a{animation:ringRotate 24s linear infinite!important;will-change:transform}
+  .ring-b{animation:ringRotate 32s linear infinite reverse!important;will-change:transform}
   html{scroll-behavior:auto}
   .hero{min-height:auto}
-  .hero-content{padding:2.5rem 0 1rem}
+  .hero-content{gap:1rem;padding:2.5rem 0 1rem}
   #about{padding-top:1rem}
   .section{padding:2rem 0}
   .section-heading{margin-bottom:1.5rem}
-}
-@media(hover:none){
-  .section h2:hover,.section h3:hover,.eyebrow:hover,.card-kicker:hover,.panel-label:hover,.timeline-year:hover,.location:hover,.skill-index:hover,.project-number:hover,.focus-item:hover,.copy-block p:hover,.card p:hover,.project-card p:hover,.project-card li:hover,.experience-box p:hover,.certificate-card p:hover,.footer h2:hover,.footer-note:hover,.footer-bottom:hover,.hero-intro:hover{color:inherit;transform:none;text-shadow:none}
+  html[data-theme="light"] .hero h1,html[data-theme="light"] .hero h1 span{animation:none!important;background-attachment:scroll}
 }
 .timeline-card h3{transition:color .25s ease,transform .25s ease,text-shadow .25s ease}
 .timeline-card:hover h3,.timeline-card:focus-within h3{color:var(--accent-bright);transform:translateX(7px);text-shadow:0 0 18px var(--eclipse-glow)}
-.boot-screen{display:grid}
-.boot-screen.boot-complete{transition-duration:.25s}
 html[data-theme="light"] .wallpaper .star-field{
   background-image:radial-gradient(circle,#4c1d95 0 1.25px,transparent 1.9px),radial-gradient(circle,#6b21a8 0 1px,transparent 1.8px),radial-gradient(circle,#581c87 0 1.1px,transparent 1.9px);
   opacity:.72;
 }
 html[data-theme="light"] .wallpaper .orbit{border-color:rgba(76,29,149,.48)}
 html[data-theme="light"] .wallpaper .orbit i{background:#581c87;box-shadow:0 0 13px 4px rgba(88,28,135,.52)}
-
+@media(prefers-reduced-motion:reduce){
+  .wallpaper .star-field-a,.wallpaper .orbit-one,.wallpaper .orbit-two,.wallpaper .eclipse-moon,.wallpaper .eclipse-corona,.hero-orb,.ring-a,.ring-b{animation:none!important}
+}
